@@ -1,11 +1,12 @@
 # --------------------------------------------------------------
-# scraper_update.py – update existing posts
+# scraper_update.py – update existing posts (least recently updated first)
 # --------------------------------------------------------------
 
 import json, time, random
 from pathlib import Path
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 OUT = Path("posts")
 VISITED_FILE = OUT / "visited_urls.json"
@@ -29,24 +30,35 @@ if VISITED_FILE.exists():
 else:
     raise FileNotFoundError("visited_urls.json not found.")
 
-# Map URLs to existing post files
+# Map URLs to existing post files and track last fetched
 url_to_file = {}
+urls_with_time = []
 for f in OUT.glob("post_*.json"):
     try:
         data = json.load(open(f, encoding="utf-8"))
-        url_to_file[data["url"]] = f
+        url = data["url"]
+        url_to_file[url] = f
+        fetched_at = data.get("fetched_at")
+        if fetched_at:
+            ts = datetime.fromisoformat(fetched_at.replace("Z", ""))
+        else:
+            ts = datetime.min  # treat missing as very old
+        urls_with_time.append((ts, url))
     except:
         continue
+
+# Sort URLs by oldest fetched first
+urls_sorted = [u for _, u in sorted(urls_with_time)]
 
 d = driver()
 
 try:
-    for url in visited_urls:
-        if url not in url_to_file:
+    for url in urls_sorted:
+        json_file = url_to_file.get(url)
+        if not json_file:
             print(f"No original file for: {url}")
             continue
 
-        json_file = url_to_file[url]
         pid = json_file.stem.split("_")[1]
         txt_file = OUT / f"post_{pid}.txt"
 
@@ -57,15 +69,28 @@ try:
             soup = BeautifulSoup(d.page_source, "lxml")
             doc_parts = []
 
+            # Post content
             post_content = soup.find("div", class_=lambda x: x and "post" in x.lower())
             if post_content:
                 doc_parts.append(post_content.get_text(" ", strip=True))
 
+            # Comments
             comments = soup.find_all("div", class_=lambda x: x and "comment" in x.lower())
             for c in comments:
                 doc_parts.append(c.get_text(" ", strip=True))
 
-            doc_text = "\n".join(doc_parts)
+            doc_text = "\n".join(doc_parts).strip()
+
+            # Deduplicate lines
+            lines = doc_text.splitlines()
+            seen_lines = set()
+            unique_lines = []
+            for line in lines:
+                l = line.strip()
+                if l and l not in seen_lines:
+                    seen_lines.add(l)
+                    unique_lines.append(line)
+            doc_text = "\n".join(unique_lines)
 
             # Compare with old text
             if txt_file.exists():
@@ -74,11 +99,18 @@ try:
                     print(f"No change: {pid}")
                     continue
 
-            # Overwrite files
+            # Overwrite text file
             txt_file.write_text(doc_text, encoding="utf-8")
 
+            # Update JSON
             json_data = json.load(open(json_file, encoding="utf-8"))
-            json_data["content"] = doc_text
+            json_data["fetched_at"] = datetime.utcnow().isoformat() + "Z"
+
+            if doc_text:
+                json_data["content"] = doc_text
+            elif "content" in json_data:
+                del json_data["content"]
+
             json_file.write_text(json.dumps(json_data, indent=2), encoding="utf-8")
 
             print(f"Updated: {pid}")

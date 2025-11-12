@@ -7,8 +7,8 @@ from pathlib import Path
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 
-URL = "https://patriots.win/new"
-TOTAL = 1200
+URL = "https://patriots.win/"
+TOTAL = 2000
 OUT = Path("posts")
 OUT.mkdir(exist_ok=True)
 
