@@ -1,3 +1,5 @@
+This scraper is designed specifically for patriots.win. This site is a custom made site so the scrapers will not be useable on other sites.
+
 Workflow:
 
 # 1. Collect the URLs
