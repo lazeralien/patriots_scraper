@@ -8,6 +8,10 @@ python scraper_urls_only.py
 python scraper_fetch_posts.py
 # 3. Update URLs and updates teh .txt and .json
 python scraper_udpate.py
+# 4. Build Corpus
+python prepare_forum_corpus.py
+#5. Build QRELS
+python build_qrels_interactive.py
 # Additional
 Remaining .py scripts were run to analyze and evaluate data.
 
