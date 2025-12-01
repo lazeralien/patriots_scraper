@@ -9,7 +9,7 @@ python scraper_fetch_posts.py
 # 3. Update URLs and updates teh .txt and .json
 python scraper_udpate.py
 # Additional
-Multiple scripts were run to analyze and evaluate
+Remaining .py scripts were run to analyze and evaluate
 
 
 # Report
